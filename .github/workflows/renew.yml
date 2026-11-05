@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       actions: write
-      contents: write          # 必须改为 write，才能推送时间戳
+      contents: write
 
     steps:
       - uses: actions/checkout@v6
@@ -59,17 +59,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          runs=\( (gh run list --workflow=" \){{ github.workflow }}" --limit=100 --json databaseId --jq '.[].databaseId')
+          runs=\( (gh run list --workflow=" \){{ github.workflow }}" --limit=50 --json databaseId --jq '.[].databaseId' 2>/dev/null || true)
+          
           count=0
           for run_id in $runs; do
             count=$((count + 1))
             if [ $count -gt 1 ]; then
               echo "删除运行记录: $run_id"
-              gh run delete $run_id || true
+              gh run delete "$run_id" || true
             fi
           done
 
-      # ========== 防休眠时间戳（核心） ==========
       - name: 🕒 更新时间戳防止 GitHub 自动暂停
         if: always()
         env:
@@ -85,4 +85,4 @@ jobs:
 
           git add .github/last-run.txt
           git commit -m "chore: update last-run timestamp [skip ci]" || echo "No changes to commit"
-          git push origin HEAD:${{ github.ref_name }} || echo "Push failed (可能已是最新)"
+          git push origin HEAD:${{ github.ref_name }} || echo "Push failed"
