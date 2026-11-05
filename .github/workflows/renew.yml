@@ -59,16 +59,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          runs=\( (gh run list --workflow=" \){{ github.workflow }}" --limit=50 --json databaseId --jq '.[].databaseId' 2>/dev/null || true)
+          # 获取当前工作流运行记录
+          gh run list --workflow="${{ github.workflow }}" --limit=50 --json databaseId --jq '.[].databaseId' > /tmp/runs.txt || true
           
           count=0
-          for run_id in $runs; do
+          while read -r run_id; do
             count=$((count + 1))
             if [ $count -gt 1 ]; then
               echo "删除运行记录: $run_id"
               gh run delete "$run_id" || true
             fi
-          done
+          done < /tmp/runs.txt
 
       - name: 🕒 更新时间戳防止 GitHub 自动暂停
         if: always()
